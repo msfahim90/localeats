@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
-import '../services/auth_service.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -16,22 +13,28 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  bool _loading = false;
-  bool _obscure = true;
 
-  Future<void> _login() async {
-    if (_emailCtrl.text.isEmpty || _passCtrl.text.isEmpty) return;
-    setState(() => _loading = true);
-    final auth = context.read<AuthService>();
-    final error = await auth.signInWithEmail(_emailCtrl.text.trim(), _passCtrl.text);
-    if (mounted) {
-      setState(() => _loading = false);
-      if (error == null) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
-      }
+  void _login() {
+    if (_emailCtrl.text.isEmpty || _passCtrl.text.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('সঠিক email ও password দাও!')),
+      );
+      return;
     }
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+  }
+
+  void _socialLogin(String provider) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$provider দিয়ে login হচ্ছে...'),
+        backgroundColor: AppColors.primary,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+    });
   }
 
   @override
@@ -56,34 +59,67 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const Text('👋', style: TextStyle(fontSize: 40)),
                     const SizedBox(height: 12),
-                    Text('Welcome Back!',
-                        style: GoogleFonts.poppins(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        )),
-                    Text('Sign in to LocalEats',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.85),
-                        )),
+                    Text('Welcome Back!', style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
+                    Text('Sign in to LocalEats', style: GoogleFonts.poppins(fontSize: 14, color: Colors.white.withOpacity(0.85))),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
-              // Social buttons
+              const SizedBox(height: 28),
+              // Google button
               _SocialButton(
-                icon: '🔴',
-                label: 'Continue with Google',
-                onTap: () {},
+                color: Colors.white,
+                borderColor: Colors.grey.shade300,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 24, height: 24,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Center(
+                        child: Text('G', style: GoogleFonts.poppins(
+                          color: const Color(0xFFDB4437),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        )),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('Continue with Google', style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: AppColors.textDark)),
+                  ],
+                ),
+                onTap: () => _socialLogin('Google'),
               ),
               const SizedBox(height: 12),
+              // Facebook button
               _SocialButton(
-                icon: '🔵',
-                label: 'Continue with Facebook',
-                onTap: () {},
+                color: const Color(0xFF1877F2),
+                borderColor: const Color(0xFF1877F2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 24, height: 24,
+                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                      child: Center(
+                        child: Text('f', style: GoogleFonts.poppins(
+                          color: const Color(0xFF1877F2),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        )),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('Continue with Facebook', style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.white)),
+                  ],
+                ),
+                onTap: () => _socialLogin('Facebook'),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+              // Divider
               Row(children: [
                 const Expanded(child: Divider()),
                 Padding(
@@ -92,63 +128,35 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const Expanded(child: Divider()),
               ]),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               // Email field
-              _InputField(
-                controller: _emailCtrl,
-                hint: 'Email address',
-                icon: Icons.email_outlined,
-              ),
+              _buildField(_emailCtrl, 'Email address', Icons.email_outlined),
               const SizedBox(height: 12),
-              _InputField(
-                controller: _passCtrl,
-                hint: 'Password',
-                icon: Icons.lock_outline,
-                obscure: _obscure,
-                suffixIcon: IconButton(
-                  icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
-                      color: AppColors.textGray),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                ),
-              ),
+              _buildField(_passCtrl, 'Password', Icons.lock_outline, obscure: true),
               const SizedBox(height: 24),
               // Sign in button
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _loading ? null : _login,
+                  onPressed: _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.secondary,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
-                  child: _loading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text('Sign In →',
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          )),
+                  child: Text('Sign In →', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Don't have account? ",
-                      style: GoogleFonts.poppins(color: AppColors.textGray)),
+                  Text("Don't have account? ", style: GoogleFonts.poppins(color: AppColors.textGray)),
                   GestureDetector(
-                    onTap: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const RegisterScreen())),
-                    child: Text('Register Free',
-                        style: GoogleFonts.poppins(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        )),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                    child: Text('Register Free', style: GoogleFonts.poppins(color: AppColors.primary, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -159,58 +167,8 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-}
 
-class _SocialButton extends StatelessWidget {
-  final String icon;
-  final String label;
-  final VoidCallback onTap;
-  const _SocialButton({required this.icon, required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [BoxShadow(color: AppColors.cardShadow, blurRadius: 8)],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 12),
-            Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InputField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-  final bool obscure;
-  final Widget? suffixIcon;
-
-  const _InputField({
-    required this.controller,
-    required this.hint,
-    required this.icon,
-    this.obscure = false,
-    this.suffixIcon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildField(TextEditingController ctrl, String hint, IconData icon, {bool obscure = false}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -218,16 +176,41 @@ class _InputField extends StatelessWidget {
         boxShadow: [BoxShadow(color: AppColors.cardShadow, blurRadius: 8)],
       ),
       child: TextField(
-        controller: controller,
+        controller: ctrl,
         obscureText: obscure,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.poppins(color: AppColors.textGray),
           prefixIcon: Icon(icon, color: AppColors.textGray),
-          suffixIcon: suffixIcon,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
+      ),
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  final Widget child;
+  final Color color;
+  final Color borderColor;
+  final VoidCallback onTap;
+  const _SocialButton({required this.child, required this.color, required this.borderColor, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8)],
+        ),
+        child: child,
       ),
     );
   }
