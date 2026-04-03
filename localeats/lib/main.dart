@@ -16,8 +16,8 @@ class LocalEatsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => CartService()),
         ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (_) => CartService()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
       ],
       child: Consumer<ThemeService>(
