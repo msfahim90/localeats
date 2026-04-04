@@ -15,25 +15,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _businessCtrl = TextEditingController();
+  String _selectedRole = 'customer';
+  String _businessType = 'Restaurant';
   bool _loading = false;
 
   Future<void> _register() async {
+    if (_nameCtrl.text.isEmpty || _emailCtrl.text.isEmpty || _passCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('সব field পূরণ করো!', style: GoogleFonts.poppins()), backgroundColor: Colors.red),
+      );
+      return;
+    }
     setState(() => _loading = true);
     final auth = context.read<AuthService>();
     final error = await auth.registerWithEmail(
-        email: _emailCtrl.text.trim(),
-        password: _passCtrl.text,
-        name: _nameCtrl.text.trim(),
-        role: _selectedRole,
-        businessName: _businessCtrl.text.trim(),
-        businessType: _businessType,
-      );
+      email: _emailCtrl.text.trim(),
+      password: _passCtrl.text,
+      name: _nameCtrl.text.trim(),
+      role: _selectedRole,
+      businessName: _businessCtrl.text.trim(),
+      businessType: _businessType,
+    );
     if (mounted) {
       setState(() => _loading = false);
       if (error == null) {
-        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+        Navigator.pushAndRemoveUntil(context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error, style: GoogleFonts.poppins()), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -49,22 +61,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
           onPressed: () => Navigator.pop(context),
         ),
+        title: Text('Create Account', style: GoogleFonts.poppins(color: AppColors.textDark, fontWeight: FontWeight.bold)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Create Account', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-              Text('Join LocalEats today!', style: GoogleFonts.poppins(color: AppColors.textGray)),
-              const SizedBox(height: 32),
+              Text('তুমি কে?', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedRole = 'customer'),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: _selectedRole == 'customer' ? AppColors.lightGreen : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _selectedRole == 'customer' ? AppColors.primary : Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('🛒', style: TextStyle(fontSize: 28)),
+                            Text('Customer', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedRole = 'vendor'),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: _selectedRole == 'vendor' ? AppColors.lightGreen : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _selectedRole == 'vendor' ? AppColors.primary : Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text('🍽️', style: TextStyle(fontSize: 28)),
+                            Text('Vendor', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               _buildField(_nameCtrl, 'Full Name', Icons.person_outline),
               const SizedBox(height: 12),
-              _buildField(_emailCtrl, 'Email address', Icons.email_outlined),
+              _buildField(_emailCtrl, 'Email Address', Icons.email_outlined),
               const SizedBox(height: 12),
               _buildField(_passCtrl, 'Password', Icons.lock_outline, obscure: true),
-              const SizedBox(height: 32),
+              if (_selectedRole == 'vendor') ...[
+                const SizedBox(height: 12),
+                _buildField(_businessCtrl, 'Business Name', Icons.store_outlined),
+              ],
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -77,7 +137,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   child: _loading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text('Register Free', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+                      : Text('Register করো', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
