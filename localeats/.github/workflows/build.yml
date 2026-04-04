@@ -19,24 +19,20 @@ jobs:
         with:
           flutter-version: '3.22.0'
           channel: 'stable'
-          cache: true
-
-      - name: Create fresh Flutter project
-        run: |
-          flutter create fresh_app --org com.localeats --project-name localeats
-          cp -r localeats/lib fresh_app/
-          cp localeats/pubspec.yaml fresh_app/
-          cd fresh_app
-          flutter pub get
 
       - name: Build APK
         run: |
-          cd fresh_app
+          flutter create myapp --org com.localeats --project-name localeats
+          rm -rf myapp/lib
+          cp -r localeats/lib myapp/lib
+          cp localeats/pubspec.yaml myapp/pubspec.yaml
+          cd myapp
+          flutter pub get
           flutter build apk --debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: LocalEats-APK
-          path: fresh_app/build/app/outputs/flutter-apk/app-debug.apk
+          path: myapp/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 30
