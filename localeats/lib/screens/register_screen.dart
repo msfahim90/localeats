@@ -20,7 +20,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     setState(() => _loading = true);
     final auth = context.read<AuthService>();
-    final error = await auth.registerWithEmail(_emailCtrl.text.trim(), _passCtrl.text, _nameCtrl.text.trim());
+    final error = await auth.registerWithEmail(
+        email: _emailCtrl.text.trim(),
+        password: _passCtrl.text,
+        name: _nameCtrl.text.trim(),
+        role: _selectedRole,
+        businessName: _businessCtrl.text.trim(),
+        businessType: _businessType,
+      );
     if (mounted) {
       setState(() => _loading = false);
       if (error == null) {
