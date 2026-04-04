@@ -20,7 +20,7 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
 
-      - name: Build APK
+      - name: Create fresh app and build
         run: |
           flutter create myapp --org com.localeats --project-name localeats
           rm -rf myapp/lib
