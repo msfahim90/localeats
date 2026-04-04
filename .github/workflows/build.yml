@@ -12,26 +12,27 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
+          distribution: 'zulu'
           java-version: '17'
-          distribution: 'temurin'
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.22.0'
           channel: 'stable'
 
-      - name: Get dependencies
+      - name: Create fresh app and build
         run: |
-          cd localeats
+          flutter create myapp --org com.localeats --project-name localeats
+          rm -rf myapp/lib
+          cp -r localeats/lib myapp/lib
+          cp localeats/pubspec.yaml myapp/pubspec.yaml
+          cd myapp
           flutter pub get
-
-      - name: Build APK
-        run: |
-          cd localeats
-          flutter build apk --release
+          flutter build apk --debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: localeats-apk
-          path: localeats/build/app/outputs/flutter-apk/app-release.apk
+          name: LocalEats-APK
+          path: myapp/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
