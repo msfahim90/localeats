@@ -95,7 +95,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                       Text('Order Placed! 🎉',
                           style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                       const SizedBox(height: 8),
-                      Text('তোমার খাবার তৈরি হচ্ছে!',
+                      Text('Your food is being prepared!',
                           style: GoogleFonts.poppins(fontSize: 16, color: AppColors.textGray)),
                       const SizedBox(height: 32),
                       // Order details card

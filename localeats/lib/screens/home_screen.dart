@@ -225,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     const Text('😕', style: TextStyle(fontSize: 48)),
                     const SizedBox(height: 12),
-                    Text('কোনো vendor পাওয়া যায়নি', style: GoogleFonts.poppins(color: AppColors.textGray)),
+                    Text('No vendors found', style: GoogleFonts.poppins(color: AppColors.textGray)),
                   ],
                 ),
               ),

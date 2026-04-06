@@ -23,7 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (_nameCtrl.text.isEmpty || _emailCtrl.text.isEmpty || _passCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('সব field পূরণ করো!', style: GoogleFonts.poppins()), backgroundColor: Colors.red),
+        SnackBar(content: Text('Please fill all fields!', style: GoogleFonts.poppins()), backgroundColor: Colors.red),
       );
       return;
     }
@@ -69,7 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('তুমি কে?', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('Who are you?', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -137,7 +137,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   child: _loading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text('Register করো', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+                      : Text('Register', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],

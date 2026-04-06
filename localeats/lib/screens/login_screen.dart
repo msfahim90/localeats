@@ -153,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Don't have account? ", style: GoogleFonts.poppins(color: AppColors.textGray)),
+                  Text("Don't have an account? ", style: GoogleFonts.poppins(color: AppColors.textGray)),
                   GestureDetector(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
                     child: Text('Register Free', style: GoogleFonts.poppins(color: AppColors.primary, fontWeight: FontWeight.w600)),

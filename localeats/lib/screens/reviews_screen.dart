@@ -118,7 +118,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                     onPressed: () {
                       if (_userRating == 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Rating দাও!', style: GoogleFonts.poppins()), backgroundColor: Colors.red),
+                          SnackBar(content: Text('Please give a rating!', style: GoogleFonts.poppins()), backgroundColor: Colors.red),
                         );
                         return;
                       }

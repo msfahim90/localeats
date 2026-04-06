@@ -106,12 +106,12 @@ class _ReferralScreenState extends State<ReferralScreen> with SingleTickerProvid
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('কীভাবে কাজ করে?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text('How does it work?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15)),
                   const SizedBox(height: 12),
-                  _HowItWorksItem('1', 'বন্ধুকে তোমার code শেয়ার করো', '📤'),
-                  _HowItWorksItem('2', 'বন্ধু প্রথম order দিলে', '🛒'),
-                  _HowItWorksItem('3', 'তুমি পাবে 50 points', '🪙'),
-                  _HowItWorksItem('4', 'বন্ধু পাবে ৳50 discount', '💰'),
+                  _HowItWorksItem('1', 'Share your code with friends', '📤'),
+                  _HowItWorksItem('2', 'When your friend places first order', '🛒'),
+                  _HowItWorksItem('3', 'You earn 50 points', '🪙'),
+                  _HowItWorksItem('4', 'Your friend gets ৳50 discount', '💰'),
                 ],
               ),
             ),

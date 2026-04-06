@@ -61,9 +61,9 @@ class _CartScreenState extends State<CartScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Vendor পরিবর্তন করবে?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        title: Text('Change vendor?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
         content: Text(
-          'Cart clear হয়ে ${newVendor['name']} এর items আসবে।',
+          'Cart will be cleared and ${newVendor['name']} items will be loaded.',
           style: GoogleFonts.poppins(fontSize: 13),
         ),
         actions: [
@@ -89,7 +89,7 @@ class _CartScreenState extends State<CartScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text('হ্যাঁ, change করো', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text('Yes, change', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -241,8 +241,8 @@ class _CartScreenState extends State<CartScreen> {
                         children: [
                           const Text('🛒', style: TextStyle(fontSize: 48)),
                           const SizedBox(height: 12),
-                          Text('Cart empty!', style: GoogleFonts.poppins(color: AppColors.textGray, fontWeight: FontWeight.w600)),
-                          Text('Vendor থেকে item add করো', style: GoogleFonts.poppins(color: AppColors.textGray, fontSize: 12)),
+                          Text('Cart is empty!', style: GoogleFonts.poppins(color: AppColors.textGray, fontWeight: FontWeight.w600)),
+                          Text('Add items from a vendor', style: GoogleFonts.poppins(color: AppColors.textGray, fontSize: 12)),
                         ],
                       ),
                     ),

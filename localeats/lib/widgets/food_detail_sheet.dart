@@ -78,7 +78,7 @@ class _FoodDetailSheetState extends State<FoodDetailSheet> {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('$_qty × ${widget.item['name']} cart এ যোগ হয়েছে! 🛒', style: GoogleFonts.poppins()),
+                        content: Text('$_qty × ${widget.item['name']} added to cart! 🛒', style: GoogleFonts.poppins()),
                         backgroundColor: AppColors.primary,
                         duration: const Duration(seconds: 2),
                       ),

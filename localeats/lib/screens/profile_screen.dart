@@ -32,7 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 12),
             Text(feature, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('এই feature টি শীঘ্রই আসছে!', style: GoogleFonts.poppins(color: AppColors.textGray)),
+            Text('This feature is coming soon!', style: GoogleFonts.poppins(color: AppColors.textGray)),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -43,7 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text('ঠিক আছে', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
               ),
             ),
           ],
