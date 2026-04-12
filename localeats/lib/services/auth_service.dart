@@ -19,6 +19,7 @@ class AuthService extends ChangeNotifier {
   bool get isLoggedIn => _user != null;
   String get userName => _userData['name'] ?? _user?.displayName ?? 'User';
   String get userEmail => _user?.email ?? '';
+  Map<String, dynamic> get userData => _userData;
 
   AuthService() {
     _auth.authStateChanges().listen(_onAuthStateChanged);
@@ -65,8 +66,8 @@ class AuthService extends ChangeNotifier {
         case 'user-not-found': return 'Email not found';
         case 'wrong-password': return 'Incorrect password';
         case 'invalid-email': return 'Invalid email address';
-        case 'invalid-credential': return 'Email বা Incorrect password';
-        default: return 'Login failed: ${e.message}';
+        case 'invalid-credential': return 'Invalid email or password';
+        default: return 'Login failed. Please try again.';
       }
     }
   }
@@ -83,24 +84,45 @@ class AuthService extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
       final cred = await _auth.createUserWithEmailAndPassword(
-        email: email, password: password);
+          email: email, password: password);
       await cred.user!.updateDisplayName(name);
 
-      final userData = {
+      final Map<String, dynamic> userData = {
         'name': name,
         'email': email,
         'role': role,
         'createdAt': FieldValue.serverTimestamp(),
       };
+
       if (role == 'vendor') {
         userData['businessName'] = businessName ?? name;
         userData['businessType'] = businessType ?? 'Restaurant';
-        userData['isApproved'] = false as Object;
-        userData['isOpen'] = false as Object;
-        userData['rating'] = 0.0 as Object;
-        userData['totalOrders'] = 0 as Object;
+        userData['isApproved'] = false;
+        userData['isOpen'] = false;
+        userData['rating'] = 0.0;
+        userData['totalOrders'] = 0;
+        userData['revenue'] = 0;
       }
+
       await _db.collection('users').doc(cred.user!.uid).set(userData);
+
+      if (role == 'vendor') {
+        await _db.collection('vendors').doc(cred.user!.uid).set({
+          'name': businessName ?? name,
+          'ownerName': name,
+          'ownerEmail': email,
+          'cuisine': businessType ?? 'Restaurant',
+          'rating': 0.0,
+          'reviewCount': 0,
+          'isApproved': false,
+          'isOpen': false,
+          'deliveryFee': 40,
+          'minDelivery': 15,
+          'maxDelivery': 25,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
       _isLoading = false;
       notifyListeners();
       return null;
@@ -108,9 +130,9 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       switch (e.code) {
-        case 'email-already-in-use': return 'Email already in use';
+        case 'email-already-in-use': return 'An account already exists with this email';
         case 'weak-password': return 'Password must be at least 6 characters';
-        default: return 'Registration failed: ${e.message}';
+        default: return 'Registration failed. Please try again.';
       }
     }
   }
