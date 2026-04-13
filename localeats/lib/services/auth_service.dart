@@ -92,6 +92,7 @@ class AuthService extends ChangeNotifier {
         'email': email,
         'role': role,
         'createdAt': FieldValue.serverTimestamp(),
+        'profileComplete': true,
       };
 
       if (role == 'vendor') {
@@ -102,15 +103,12 @@ class AuthService extends ChangeNotifier {
         userData['rating'] = 0.0;
         userData['totalOrders'] = 0;
         userData['revenue'] = 0;
-      }
 
-      await _db.collection('users').doc(cred.user!.uid).set(userData);
-
-      if (role == 'vendor') {
         await _db.collection('vendors').doc(cred.user!.uid).set({
           'name': businessName ?? name,
           'ownerName': name,
           'ownerEmail': email,
+          'ownerId': cred.user!.uid,
           'cuisine': businessType ?? 'Restaurant',
           'rating': 0.0,
           'reviewCount': 0,
@@ -119,10 +117,12 @@ class AuthService extends ChangeNotifier {
           'deliveryFee': 40,
           'minDelivery': 15,
           'maxDelivery': 25,
+          'menu': [],
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
 
+      await _db.collection('users').doc(cred.user!.uid).set(userData);
       _isLoading = false;
       notifyListeners();
       return null;
@@ -135,6 +135,24 @@ class AuthService extends ChangeNotifier {
         default: return 'Registration failed. Please try again.';
       }
     }
+  }
+
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  Future<void> updateProfile(Map<String, dynamic> data) async {
+    if (_user == null) return;
+    await _db.collection('users').doc(_user!.uid).update(data);
+    _userData.addAll(data);
+    if (data.containsKey('name')) {
+      await _user!.updateDisplayName(data['name']);
+    }
+    notifyListeners();
   }
 
   Future<void> signOut() async {
