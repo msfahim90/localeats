@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
+import 'location_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -41,7 +42,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _loading = false);
       if (error == null) {
         Navigator.pushAndRemoveUntil(context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()), (_) => false);
+          MaterialPageRoute(builder: (_) => const LocationScreen()), (_) => false);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(error, style: GoogleFonts.poppins()), backgroundColor: Colors.red),

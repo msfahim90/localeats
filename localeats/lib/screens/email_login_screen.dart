@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
+import 'location_screen.dart';
 import 'vendor_dashboard_screen.dart';
 import 'admin_panel_screen.dart';
 import 'register_screen.dart';
