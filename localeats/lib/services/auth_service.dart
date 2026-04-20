@@ -19,6 +19,7 @@ class AuthService extends ChangeNotifier {
   bool get isLoggedIn => _user != null;
   String get userName => _userData['name'] ?? _user?.displayName ?? 'User';
   String get userEmail => _user?.email ?? '';
+  String get userId => _user?.uid ?? '';
   Map<String, dynamic> get userData => _userData;
 
   AuthService() {
@@ -79,6 +80,7 @@ class AuthService extends ChangeNotifier {
     required String role,
     String? businessName,
     String? businessType,
+    String? phone,
   }) async {
     try {
       _isLoading = true;
@@ -91,8 +93,11 @@ class AuthService extends ChangeNotifier {
         'name': name,
         'email': email,
         'role': role,
+        'phone': phone ?? '',
         'createdAt': FieldValue.serverTimestamp(),
-        'profileComplete': true,
+        'addresses': [],
+        'favoriteVendors': [],
+        'totalOrders': 0,
       };
 
       if (role == 'vendor') {
@@ -152,6 +157,31 @@ class AuthService extends ChangeNotifier {
     if (data.containsKey('name')) {
       await _user!.updateDisplayName(data['name']);
     }
+    notifyListeners();
+  }
+
+  Future<void> saveAddress({
+    required String houseNumber,
+    required String apartment,
+    required String area,
+    required String city,
+    required String instructions,
+    required String label,
+  }) async {
+    if (_user == null) return;
+    final address = {
+      'houseNumber': houseNumber,
+      'apartment': apartment,
+      'area': area,
+      'city': city,
+      'instructions': instructions,
+      'label': label,
+      'createdAt': FieldValue.serverTimestamp(),
+    };
+    await _db.collection('users').doc(_user!.uid).update({
+      'addresses': FieldValue.arrayUnion([address]),
+    });
+    _userData['addresses'] = [...(_userData['addresses'] ?? []), address];
     notifyListeners();
   }
 

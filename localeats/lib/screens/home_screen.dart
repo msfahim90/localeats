@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
+import '../services/auth_service.dart';
 import 'vendor_profile_screen.dart';
 import 'cart_screen.dart';
-import 'see_all_vendors_screen.dart';
-import 'filter_screen.dart';
-import 'see_all_vendors_screen.dart';
-import 'filter_screen.dart';
 import 'profile_screen.dart';
+import 'see_all_vendors_screen.dart';
+import 'filter_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,27 +23,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<String> _categories = ['All', 'Pizza', 'Asian', 'Burger', 'Bengali', 'Dessert'];
 
-  final List<Map<String, dynamic>> _allVendors = [
-    {'id': '1', 'name': "Mama's Kitchen", 'cuisine': 'Home Chef', 'category': 'Bengali', 'distance': 0.8, 'priceFrom': 180, 'priceTo': 350, 'rating': 4.8, 'emoji': '🏠', 'color': Color(0xFFFFF3CD)},
-    {'id': '2', 'name': 'Dhaka Deli', 'cuisine': 'Bengali Cuisine', 'category': 'Bengali', 'distance': 1.2, 'priceFrom': 120, 'priceTo': 280, 'rating': 4.6, 'emoji': '🍛', 'color': Color(0xFFE8F5E9)},
-    {'id': '3', 'name': 'Burger Express', 'cuisine': 'Fast Food', 'category': 'Burger', 'distance': 0.5, 'priceFrom': 150, 'priceTo': 320, 'rating': 4.5, 'emoji': '🍔', 'color': Color(0xFFFCE4EC)},
-    {'id': '4', 'name': 'Asian Garden', 'cuisine': 'Chinese • Thai', 'category': 'Asian', 'distance': 1.8, 'priceFrom': 200, 'priceTo': 450, 'rating': 4.7, 'emoji': '🍜', 'color': Color(0xFFE3F2FD)},
-    {'id': '5', 'name': 'Pizza Palace', 'cuisine': 'Italian', 'category': 'Pizza', 'distance': 1.0, 'priceFrom': 250, 'priceTo': 500, 'rating': 4.4, 'emoji': '🍕', 'color': Color(0xFFFFF8E1)},
-    {'id': '6', 'name': 'Sweet Corner', 'cuisine': 'Desserts', 'category': 'Dessert', 'distance': 0.7, 'priceFrom': 50, 'priceTo': 150, 'rating': 4.9, 'emoji': '🍰', 'color': Color(0xFFF3E5F5)},
-  ];
-
-  List<Map<String, dynamic>> get _filteredVendors {
-    return _allVendors.where((v) {
-      final matchCategory = _selectedCategory == 'All' || v['category'] == _selectedCategory;
-      final matchSearch = _searchQuery.isEmpty ||
-          v['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          v['cuisine'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchCategory && matchSearch;
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -53,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(),
+                    _buildHeader(auth),
                     _buildSearchBar(),
                     _buildCategories(),
                     _buildNearbyVendors(),
@@ -69,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AuthService auth) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
@@ -77,10 +60,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Row(
             children: [
-              // App Logo
               Container(
-                width: 42,
-                height: 42,
+                width: 42, height: 42,
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(12),
@@ -91,12 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Delivering to', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textGray)),
+                  Text('Delivering to', style: GoogleFonts.poppins(
+                      fontSize: 12, color: AppColors.textGray)),
                   Row(
                     children: [
                       const Icon(Icons.location_on, color: AppColors.secondary, size: 16),
                       const SizedBox(width: 2),
-                      Text('Bogura, BD', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                      Text('Bogura, BD', style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600, color: AppColors.textDark)),
                     ],
                   ),
                 ],
@@ -106,7 +89,10 @@ class _HomeScreenState extends State<HomeScreen> {
           CircleAvatar(
             backgroundColor: AppColors.secondary,
             radius: 22,
-            child: Text('SF', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Text(
+              auth.userName.isNotEmpty ? auth.userName[0].toUpperCase() : 'U',
+              style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -120,30 +106,52 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('What would you like to eat\ntoday? 🍽️',
-              style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textDark, height: 1.3)),
+              style: GoogleFonts.poppins(
+                  fontSize: 22, fontWeight: FontWeight.bold,
+                  color: AppColors.textDark, height: 1.3)),
           const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: AppColors.cardShadow, blurRadius: 10)],
-            ),
-            child: TextField(
-              onChanged: (v) => setState(() => _searchQuery = v),
-              decoration: InputDecoration(
-                hintText: 'Search restaurants, food...',
-                hintStyle: GoogleFonts.poppins(color: AppColors.textGray, fontSize: 14),
-                prefixIcon: const Icon(Icons.search, color: AppColors.textGray),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: AppColors.textGray),
-                        onPressed: () => setState(() => _searchQuery = ''),
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [BoxShadow(color: AppColors.cardShadow, blurRadius: 10)],
+                  ),
+                  child: TextField(
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                    decoration: InputDecoration(
+                      hintText: 'Search restaurants, food...',
+                      hintStyle: GoogleFonts.poppins(
+                          color: AppColors.textGray, fontSize: 14),
+                      prefixIcon: const Icon(Icons.search, color: AppColors.textGray),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: AppColors.textGray),
+                              onPressed: () => setState(() => _searchQuery = ''))
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const FilterScreen())),
+                child: Container(
+                  width: 50, height: 50,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [BoxShadow(color: AppColors.cardShadow, blurRadius: 8)],
+                  ),
+                  child: const Icon(Icons.tune, color: Colors.white, size: 22),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -161,8 +169,10 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Categories', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppColors.textDark, fontSize: 16)),
-                Text('See All →', style: GoogleFonts.poppins(color: AppColors.secondary, fontSize: 13)),
+                Text('Categories', style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600, color: AppColors.textDark, fontSize: 16)),
+                Text('See All →', style: GoogleFonts.poppins(
+                    color: AppColors.secondary, fontSize: 13)),
               ],
             ),
           ),
@@ -184,14 +194,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(22),
                       boxShadow: [BoxShadow(color: AppColors.cardShadow, blurRadius: 6)],
                     ),
-                    child: Text(
-                      _categories[i],
-                      style: GoogleFonts.poppins(
+                    child: Text(_categories[i], style: GoogleFonts.poppins(
                         color: selected ? Colors.white : AppColors.textDark,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                    ),
+                        fontWeight: FontWeight.w500, fontSize: 13)),
                   ),
                 );
               },
@@ -203,7 +208,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNearbyVendors() {
-    final vendors = _filteredVendors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
@@ -212,29 +216,79 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Nearby Vendors', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppColors.textDark, fontSize: 16)),
-              Text('See All →', style: GoogleFonts.poppins(color: AppColors.secondary, fontSize: 13)),
+              Text('Nearby Vendors', style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600, color: AppColors.textDark, fontSize: 16)),
+              GestureDetector(
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const SeeAllVendorsScreen())),
+                child: Text('See All →', style: GoogleFonts.poppins(
+                    color: AppColors.secondary, fontSize: 13)),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          if (vendors.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  children: [
-                    const Text('😕', style: TextStyle(fontSize: 48)),
-                    const SizedBox(height: 12),
-                    Text('No vendors found', style: GoogleFonts.poppins(color: AppColors.textGray)),
-                  ],
-                ),
-              ),
-            )
-          else
-            ...vendors.map((v) => _VendorCard(
-              vendor: v,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => VendorProfileScreen(vendorData: v))),
-            )),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('vendors')
+                .where('isApproved', isEqualTo: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(
+                    color: AppColors.primary));
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return Center(
+                  child: Column(
+                    children: [
+                      const Text('😕', style: TextStyle(fontSize: 48)),
+                      const SizedBox(height: 12),
+                      Text('No vendors available yet',
+                          style: GoogleFonts.poppins(color: AppColors.textGray)),
+                    ],
+                  ),
+                );
+              }
+
+              var vendors = snapshot.data!.docs
+                  .map((d) => {'id': d.id, ...d.data() as Map<String, dynamic>})
+                  .where((v) {
+                final matchCat = _selectedCategory == 'All' ||
+                    v['category'] == _selectedCategory;
+                final matchSearch = _searchQuery.isEmpty ||
+                    v['name'].toString().toLowerCase()
+                        .contains(_searchQuery.toLowerCase()) ||
+                    v['cuisine'].toString().toLowerCase()
+                        .contains(_searchQuery.toLowerCase());
+                return matchCat && matchSearch;
+              }).toList();
+
+              if (vendors.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      children: [
+                        const Text('😕', style: TextStyle(fontSize: 48)),
+                        const SizedBox(height: 12),
+                        Text('No vendors found',
+                            style: GoogleFonts.poppins(color: AppColors.textGray)),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return Column(
+                children: vendors.map((v) => _VendorCard(
+                  vendor: v,
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) =>
+                          VendorProfileScreen(vendorData: v))),
+                )).toList(),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -250,9 +304,11 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: (i) {
           if (i == 2) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const CartScreen()));
           } else if (i == 3) {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()));
           } else {
             setState(() => _currentIndex = i);
           }
@@ -260,15 +316,23 @@ class _HomeScreenState extends State<HomeScreen> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textGray,
-        selectedLabelStyle: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
+        selectedLabelStyle: GoogleFonts.poppins(
+            fontSize: 11, fontWeight: FontWeight.w600),
         unselectedLabelStyle: GoogleFonts.poppins(fontSize: 11),
         elevation: 0,
         backgroundColor: Colors.transparent,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_outlined), activeIcon: Icon(Icons.shopping_cart), label: 'Cart'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.search), label: 'Search'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_cart_outlined),
+              activeIcon: Icon(Icons.shopping_cart), label: 'Cart'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
@@ -296,29 +360,46 @@ class _VendorCard extends StatelessWidget {
           children: [
             Container(
               width: 64, height: 64,
-              decoration: BoxDecoration(color: vendor['color'], borderRadius: BorderRadius.circular(14)),
-              child: Center(child: Text(vendor['emoji'], style: const TextStyle(fontSize: 30))),
+              decoration: BoxDecoration(
+                color: AppColors.lightOrange,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Center(child: Text(
+                  vendor['emoji'] ?? '🍽️',
+                  style: const TextStyle(fontSize: 30))),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(vendor['name'], style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                  Text('${vendor['cuisine']} • ${vendor['distance']} km away', style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textGray)),
+                  Text(vendor['name'] ?? '',
+                      style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600, color: AppColors.textDark)),
+                  Text('${vendor['cuisine'] ?? ''} • ${vendor['distance'] ?? 0} km away',
+                      style: GoogleFonts.poppins(
+                          fontSize: 12, color: AppColors.textGray)),
                   const SizedBox(height: 4),
-                  Text('৳${vendor['priceFrom']} – ৳${vendor['priceTo']}', style: GoogleFonts.poppins(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  Text('৳${vendor['priceFrom'] ?? 0} – ৳${vendor['priceTo'] ?? 0}',
+                      style: GoogleFonts.poppins(
+                          fontSize: 13, color: AppColors.primary,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: AppColors.lightGreen, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                  color: AppColors.lightGreen,
+                  borderRadius: BorderRadius.circular(8)),
               child: Row(
                 children: [
                   const Icon(Icons.star, color: Colors.amber, size: 14),
                   const SizedBox(width: 3),
-                  Text('${vendor['rating']}', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  Text('${vendor['rating'] ?? 0}',
+                      style: GoogleFonts.poppins(
+                          fontSize: 12, fontWeight: FontWeight.w600,
+                          color: AppColors.primary)),
                 ],
               ),
             ),

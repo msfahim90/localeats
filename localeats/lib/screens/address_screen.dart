@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
+import '../services/auth_service.dart';
 import 'home_screen.dart';
 
 class AddressScreen extends StatefulWidget {
@@ -14,8 +16,7 @@ class _AddressScreenState extends State<AddressScreen> {
   final _apartmentCtrl = TextEditingController();
   final _instructionsCtrl = TextEditingController();
   String _selectedLabel = 'home';
-  String _detectedArea = 'Madla Road';
-  String _detectedCity = 'Bogra';
+  bool _saving = false;
 
   final List<Map<String, dynamic>> _labels = [
     {'id': 'home', 'icon': Icons.home_outlined, 'label': 'Home'},
@@ -24,25 +25,50 @@ class _AddressScreenState extends State<AddressScreen> {
     {'id': 'other', 'icon': Icons.add, 'label': 'Other'},
   ];
 
+  Future<void> _saveAddress() async {
+    if (_houseCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter house number',
+            style: GoogleFonts.poppins()), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    final auth = context.read<AuthService>();
+    await auth.saveAddress(
+      houseNumber: _houseCtrl.text.trim(),
+      apartment: _apartmentCtrl.text.trim(),
+      area: 'Madla Road',
+      city: 'Bogra',
+      instructions: _instructionsCtrl.text.trim(),
+      label: _selectedLabel,
+    );
+    if (mounted) {
+      setState(() => _saving = false);
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (_) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Map area
           Container(
             height: 180,
             width: double.infinity,
             color: Colors.green.shade50,
             child: Stack(
               children: [
-                // Map grid
                 CustomPaint(
                   size: const Size(double.infinity, 180),
-                  painter: _FullMapPainter(),
+                  painter: _MapPainter(),
                 ),
-                // Back button
                 Positioned(
                   top: 40, left: 16,
                   child: GestureDetector(
@@ -52,20 +78,21 @@ class _AddressScreenState extends State<AddressScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
+                        boxShadow: [BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8)],
                       ),
                       child: const Icon(Icons.arrow_back, size: 20),
                     ),
                   ),
                 ),
-                // Pin
                 const Center(
-                  child: Icon(Icons.location_on, color: Color(0xFFE91E8C), size: 40),
+                  child: Icon(Icons.location_on,
+                      color: Color(0xFFE91E8C), size: 40),
                 ),
               ],
             ),
           ),
-          // Form
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
@@ -76,7 +103,6 @@ class _AddressScreenState extends State<AddressScreen> {
                       style: GoogleFonts.poppins(
                           fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
-                  // Detected location
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -93,12 +119,14 @@ class _AddressScreenState extends State<AddressScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(_detectedArea,
+                              Text('Madla Road',
                                   style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.bold, fontSize: 15)),
-                              Text(_detectedCity,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15)),
+                              Text('Bogra',
                                   style: GoogleFonts.poppins(
-                                      color: Colors.grey.shade600, fontSize: 13)),
+                                      color: Colors.grey.shade600,
+                                      fontSize: 13)),
                             ],
                           ),
                         ),
@@ -180,30 +208,13 @@ class _AddressScreenState extends State<AddressScreen> {
               ),
             ),
           ),
-          // Save button
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
             child: SizedBox(
               width: double.infinity,
               height: 54,
               child: ElevatedButton(
-                onPressed: () {
-                  if (_houseCtrl.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Please enter house number',
-                            style: GoogleFonts.poppins()),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HomeScreen()),
-                        (_) => false,
-                  );
-                },
+                onPressed: _saving ? null : _saveAddress,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE91E8C),
                   foregroundColor: Colors.white,
@@ -211,9 +222,11 @@ class _AddressScreenState extends State<AddressScreen> {
                       borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                child: Text('Save and continue',
-                    style: GoogleFonts.poppins(
-                        fontSize: 16, fontWeight: FontWeight.w600)),
+                child: _saving
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text('Save and continue',
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
           ),
@@ -227,7 +240,8 @@ class _AddressScreenState extends State<AddressScreen> {
       controller: ctrl,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.poppins(color: Colors.grey.shade400, fontSize: 14),
+        hintStyle: GoogleFonts.poppins(
+            color: Colors.grey.shade400, fontSize: 14),
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -236,23 +250,29 @@ class _AddressScreenState extends State<AddressScreen> {
             borderSide: BorderSide(color: Colors.grey.shade300)),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFE91E8C), width: 2)),
+            borderSide: const BorderSide(
+                color: Color(0xFFE91E8C), width: 2)),
       ),
     );
   }
 }
 
-class _FullMapPainter extends CustomPainter {
+class _MapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.green.shade200..strokeWidth = 0.8;
+    final paint = Paint()
+      ..color = Colors.green.shade200
+      ..strokeWidth = 0.8;
     for (double i = 0; i < size.width; i += 25) {
       canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
     }
     for (double i = 0; i < size.height; i += 25) {
       canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
     }
-    final road = Paint()..color = Colors.white..strokeWidth = 10..strokeCap = StrokeCap.round;
+    final road = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 10
+      ..strokeCap = StrokeCap.round;
     canvas.drawLine(const Offset(0, 90), Offset(size.width, 90), road);
     canvas.drawLine(const Offset(120, 0), Offset(120, size.height), road);
   }
