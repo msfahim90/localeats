@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../services/auth_service.dart';
-import 'home_screen.dart';
 import 'location_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -16,16 +15,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-  final _businessCtrl = TextEditingController();
-  String _selectedRole = 'customer';
-  String _businessType = 'Restaurant';
+  final _confirmPassCtrl = TextEditingController();
+  bool _obscure = true;
+  bool _obscureConfirm = true;
   bool _loading = false;
+  bool _agreed = false;
 
   Future<void> _register() async {
-    if (_nameCtrl.text.isEmpty || _emailCtrl.text.isEmpty || _passCtrl.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill all fields!', style: GoogleFonts.poppins()), backgroundColor: Colors.red),
-      );
+    if (_nameCtrl.text.isEmpty || _emailCtrl.text.isEmpty ||
+        _passCtrl.text.isEmpty || _confirmPassCtrl.text.isEmpty) {
+      _showSnack('Please fill all fields', Colors.red);
+      return;
+    }
+    if (_passCtrl.text != _confirmPassCtrl.text) {
+      _showSnack('Passwords do not match', Colors.red);
+      return;
+    }
+    if (_passCtrl.text.length < 6) {
+      _showSnack('Password must be at least 6 characters', Colors.red);
+      return;
+    }
+    if (!_agreed) {
+      _showSnack('Please agree to Terms and Conditions', Colors.red);
       return;
     }
     setState(() => _loading = true);
@@ -34,113 +45,164 @@ class _RegisterScreenState extends State<RegisterScreen> {
       email: _emailCtrl.text.trim(),
       password: _passCtrl.text,
       name: _nameCtrl.text.trim(),
-      role: _selectedRole,
-      businessName: _businessCtrl.text.trim(),
-      businessType: _businessType,
+      role: 'customer',
     );
     if (mounted) {
       setState(() => _loading = false);
       if (error == null) {
         Navigator.pushAndRemoveUntil(context,
-          MaterialPageRoute(builder: (_) => const LocationScreen()), (_) => false);
+            MaterialPageRoute(builder: (_) => const LocationScreen()),
+                (_) => false);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error, style: GoogleFonts.poppins()), backgroundColor: Colors.red),
-        );
+        _showSnack(error, Colors.red);
       }
     }
+  }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg, style: GoogleFonts.poppins()),
+          backgroundColor: color, duration: const Duration(seconds: 3)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textDark),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Create Account', style: GoogleFonts.poppins(color: AppColors.textDark, fontWeight: FontWeight.bold)),
+        title: Text('Create Account',
+            style: GoogleFonts.poppins(color: Colors.black,
+                fontWeight: FontWeight.w600)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Who are you?', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              Text('Join LocalEats! 🎉',
+                  style: GoogleFonts.poppins(fontSize: 24,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Create your account to start ordering',
+                  style: GoogleFonts.poppins(
+                      color: Colors.grey.shade600, fontSize: 14)),
+              const SizedBox(height: 32),
+
+              _label('Full Name'),
+              _buildField(_nameCtrl, 'Enter your full name',
+                  Icons.person_outline),
+              const SizedBox(height: 16),
+
+              _label('Email Address'),
+              _buildField(_emailCtrl, 'Enter your email',
+                  Icons.email_outlined,
+                  type: TextInputType.emailAddress),
+              const SizedBox(height: 16),
+
+              _label('Password'),
+              _buildField(_passCtrl, 'Create a password',
+                  Icons.lock_outline, obscure: _obscure,
+                  suffix: IconButton(
+                    icon: Icon(_obscure ? Icons.visibility_off
+                        : Icons.visibility, color: Colors.grey),
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                  )),
+              const SizedBox(height: 16),
+
+              _label('Confirm Password'),
+              _buildField(_confirmPassCtrl, 'Confirm your password',
+                  Icons.lock_outline, obscure: _obscureConfirm,
+                  suffix: IconButton(
+                    icon: Icon(_obscureConfirm ? Icons.visibility_off
+                        : Icons.visibility, color: Colors.grey),
+                    onPressed: () => setState(
+                            () => _obscureConfirm = !_obscureConfirm),
+                  )),
+              const SizedBox(height: 20),
+
+              // Terms checkbox
               Row(
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedRole = 'customer'),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: _selectedRole == 'customer' ? AppColors.lightGreen : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _selectedRole == 'customer' ? AppColors.primary : Colors.grey.shade200),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text('🛒', style: TextStyle(fontSize: 28)),
-                            Text('Customer', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                    ),
+                  Checkbox(
+                    value: _agreed,
+                    onChanged: (v) => setState(() => _agreed = v ?? false),
+                    activeColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4)),
                   ),
-                  const SizedBox(width: 12),
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedRole = 'vendor'),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: _selectedRole == 'vendor' ? AppColors.lightGreen : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _selectedRole == 'vendor' ? AppColors.primary : Colors.grey.shade200),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text('🍽️', style: TextStyle(fontSize: 28)),
-                            Text('Vendor', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                          ],
-                        ),
+                    child: RichText(
+                      text: TextSpan(
+                        style: GoogleFonts.poppins(
+                            fontSize: 12, color: Colors.grey.shade600),
+                        children: [
+                          const TextSpan(text: 'I agree to the '),
+                          TextSpan(text: 'Terms and Conditions',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: AppColors.primary,
+                                  decoration: TextDecoration.underline)),
+                          const TextSpan(text: ' and '),
+                          TextSpan(text: 'Privacy Policy',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: AppColors.primary,
+                                  decoration: TextDecoration.underline)),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              _buildField(_nameCtrl, 'Full Name', Icons.person_outline),
-              const SizedBox(height: 12),
-              _buildField(_emailCtrl, 'Email Address', Icons.email_outlined),
-              const SizedBox(height: 12),
-              _buildField(_passCtrl, 'Password', Icons.lock_outline, obscure: true),
-              if (_selectedRole == 'vendor') ...[
-                const SizedBox(height: 12),
-                _buildField(_businessCtrl, 'Business Name', Icons.store_outlined),
-              ],
               const SizedBox(height: 24),
+
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 54,
                 child: ElevatedButton(
                   onPressed: _loading ? null : _register,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
                   ),
                   child: _loading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text('Register', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+                      : Text('Create Account',
+                          style: GoogleFonts.poppins(
+                              fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
+              const SizedBox(height: 16),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Already have an account? ',
+                        style: GoogleFonts.poppins(
+                            color: Colors.grey.shade600)),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Text('Sign in',
+                          style: GoogleFonts.poppins(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -148,23 +210,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildField(TextEditingController ctrl, String hint, IconData icon, {bool obscure = false}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: AppColors.cardShadow, blurRadius: 8)],
-      ),
-      child: TextField(
-        controller: ctrl,
-        obscureText: obscure,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: GoogleFonts.poppins(color: AppColors.textGray),
-          prefixIcon: Icon(icon, color: AppColors.textGray),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        ),
+  Widget _label(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(text, style: GoogleFonts.poppins(
+          fontWeight: FontWeight.w600, fontSize: 14)),
+    );
+  }
+
+  Widget _buildField(TextEditingController ctrl, String hint, IconData icon,
+      {bool obscure = false, Widget? suffix, TextInputType? type}) {
+    return TextField(
+      controller: ctrl,
+      obscureText: obscure,
+      keyboardType: type,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.poppins(
+            color: Colors.grey.shade400, fontSize: 14),
+        prefixIcon: Icon(icon, color: Colors.grey.shade500),
+        suffixIcon: suffix,
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey.shade300)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+        filled: true,
+        fillColor: Colors.grey.shade50,
       ),
     );
   }

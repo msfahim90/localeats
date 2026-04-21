@@ -56,7 +56,8 @@ class AuthService extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      await _auth.signInWithEmailAndPassword(
+          email: email.trim(), password: password);
       _isLoading = false;
       notifyListeners();
       return null;
@@ -64,12 +65,18 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       switch (e.code) {
-        case 'user-not-found': return 'Email not found';
+        case 'user-not-found': return 'No account found with this email';
         case 'wrong-password': return 'Incorrect password';
         case 'invalid-email': return 'Invalid email address';
         case 'invalid-credential': return 'Invalid email or password';
+        case 'user-disabled': return 'This account has been disabled';
+        case 'too-many-requests': return 'Too many attempts. Please try again later';
         default: return 'Login failed. Please try again.';
       }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return 'An error occurred. Please try again.';
     }
   }
 
@@ -85,13 +92,14 @@ class AuthService extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
+
       final cred = await _auth.createUserWithEmailAndPassword(
-          email: email, password: password);
+          email: email.trim(), password: password);
       await cred.user!.updateDisplayName(name);
 
       final Map<String, dynamic> userData = {
         'name': name,
-        'email': email,
+        'email': email.trim(),
         'role': role,
         'phone': phone ?? '',
         'createdAt': FieldValue.serverTimestamp(),
@@ -112,7 +120,7 @@ class AuthService extends ChangeNotifier {
         await _db.collection('vendors').doc(cred.user!.uid).set({
           'name': businessName ?? name,
           'ownerName': name,
-          'ownerEmail': email,
+          'ownerEmail': email.trim(),
           'ownerId': cred.user!.uid,
           'cuisine': businessType ?? 'Restaurant',
           'rating': 0.0,
@@ -128,6 +136,7 @@ class AuthService extends ChangeNotifier {
       }
 
       await _db.collection('users').doc(cred.user!.uid).set(userData);
+
       _isLoading = false;
       notifyListeners();
       return null;
@@ -135,16 +144,27 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       switch (e.code) {
-        case 'email-already-in-use': return 'An account already exists with this email';
-        case 'weak-password': return 'Password must be at least 6 characters';
-        default: return 'Registration failed. Please try again.';
+        case 'email-already-in-use':
+          return 'An account already exists with this email';
+        case 'weak-password':
+          return 'Password must be at least 6 characters';
+        case 'invalid-email':
+          return 'Invalid email address';
+        case 'operation-not-allowed':
+          return 'Email registration is not enabled';
+        default:
+          return 'Registration failed: ${e.message}';
       }
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return 'An error occurred. Please try again.';
     }
   }
 
   Future<void> resetPassword(String email) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email);
+      await _auth.sendPasswordResetEmail(email: email.trim());
     } catch (e) {
       // ignore
     }
@@ -152,12 +172,16 @@ class AuthService extends ChangeNotifier {
 
   Future<void> updateProfile(Map<String, dynamic> data) async {
     if (_user == null) return;
-    await _db.collection('users').doc(_user!.uid).update(data);
-    _userData.addAll(data);
-    if (data.containsKey('name')) {
-      await _user!.updateDisplayName(data['name']);
+    try {
+      await _db.collection('users').doc(_user!.uid).update(data);
+      _userData.addAll(data);
+      if (data.containsKey('name')) {
+        await _user!.updateDisplayName(data['name']);
+      }
+      notifyListeners();
+    } catch (e) {
+      // ignore
     }
-    notifyListeners();
   }
 
   Future<void> saveAddress({
@@ -169,20 +193,24 @@ class AuthService extends ChangeNotifier {
     required String label,
   }) async {
     if (_user == null) return;
-    final address = {
-      'houseNumber': houseNumber,
-      'apartment': apartment,
-      'area': area,
-      'city': city,
-      'instructions': instructions,
-      'label': label,
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-    await _db.collection('users').doc(_user!.uid).update({
-      'addresses': FieldValue.arrayUnion([address]),
-    });
-    _userData['addresses'] = [...(_userData['addresses'] ?? []), address];
-    notifyListeners();
+    try {
+      final address = {
+        'houseNumber': houseNumber,
+        'apartment': apartment,
+        'area': area,
+        'city': city,
+        'instructions': instructions,
+        'label': label,
+      };
+      await _db.collection('users').doc(_user!.uid).update({
+        'addresses': FieldValue.arrayUnion([address]),
+      });
+      if (_userData['addresses'] == null) _userData['addresses'] = [];
+      (_userData['addresses'] as List).add(address);
+      notifyListeners();
+    } catch (e) {
+      // ignore
+    }
   }
 
   Future<void> signOut() async {
