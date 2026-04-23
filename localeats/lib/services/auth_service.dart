@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 enum UserRole { customer, vendor, admin }
 
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   User? _user;
   UserRole _role = UserRole.customer;
@@ -52,6 +54,24 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  Future<void> _saveNewUser(User user, {String? name, String? phone}) async {
+    final doc = await _db.collection('users').doc(user.uid).get();
+    if (!doc.exists) {
+      await _db.collection('users').doc(user.uid).set({
+        'name': name ?? user.displayName ?? 'User',
+        'email': user.email ?? '',
+        'phone': phone ?? user.phoneNumber ?? '',
+        'role': 'customer',
+        'createdAt': FieldValue.serverTimestamp(),
+        'addresses': [],
+        'favoriteVendors': [],
+        'totalOrders': 0,
+        'photoUrl': user.photoURL ?? '',
+      });
+    }
+  }
+
+  // Email Sign In
   Future<String?> signInWithEmail(String email, String password) async {
     try {
       _isLoading = true;
@@ -70,7 +90,7 @@ class AuthService extends ChangeNotifier {
         case 'invalid-email': return 'Invalid email address';
         case 'invalid-credential': return 'Invalid email or password';
         case 'user-disabled': return 'This account has been disabled';
-        case 'too-many-requests': return 'Too many attempts. Please try again later';
+        case 'too-many-requests': return 'Too many attempts. Try again later';
         default: return 'Login failed. Please try again.';
       }
     } catch (e) {
@@ -80,6 +100,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  // Email Register
   Future<String?> registerWithEmail({
     required String email,
     required String password,
@@ -92,7 +113,6 @@ class AuthService extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-
       final cred = await _auth.createUserWithEmailAndPassword(
           email: email.trim(), password: password);
       await cred.user!.updateDisplayName(name);
@@ -136,7 +156,6 @@ class AuthService extends ChangeNotifier {
       }
 
       await _db.collection('users').doc(cred.user!.uid).set(userData);
-
       _isLoading = false;
       notifyListeners();
       return null;
@@ -144,21 +163,100 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       switch (e.code) {
-        case 'email-already-in-use':
-          return 'An account already exists with this email';
-        case 'weak-password':
-          return 'Password must be at least 6 characters';
-        case 'invalid-email':
-          return 'Invalid email address';
-        case 'operation-not-allowed':
-          return 'Email registration is not enabled';
-        default:
-          return 'Registration failed: ${e.message}';
+        case 'email-already-in-use': return 'Account already exists with this email';
+        case 'weak-password': return 'Password must be at least 6 characters';
+        case 'invalid-email': return 'Invalid email address';
+        default: return 'Registration failed. Please try again.';
       }
     } catch (e) {
       _isLoading = false;
       notifyListeners();
       return 'An error occurred. Please try again.';
+    }
+  }
+
+  // Google Sign In
+  Future<String?> signInWithGoogle() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        _isLoading = false;
+        notifyListeners();
+        return 'Google sign in cancelled';
+      }
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final cred = await _auth.signInWithCredential(credential);
+      await _saveNewUser(cred.user!);
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return 'Google sign in failed. Please try again.';
+    }
+  }
+
+  // Phone Sign In - Step 1: Send OTP
+  Future<String?> sendOTP(String phoneNumber,
+      Function(String) onCodeSent) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          await _auth.signInWithCredential(credential);
+          await _saveNewUser(_auth.currentUser!, phone: phoneNumber);
+          _isLoading = false;
+          notifyListeners();
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          _isLoading = false;
+          notifyListeners();
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          _isLoading = false;
+          notifyListeners();
+          onCodeSent(verificationId);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {},
+        timeout: const Duration(seconds: 60),
+      );
+      return null;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return 'Failed to send OTP. Please try again.';
+    }
+  }
+
+  // Phone Sign In - Step 2: Verify OTP
+  Future<String?> verifyOTP(String verificationId, String otp,
+      String phoneNumber) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: otp,
+      );
+      final cred = await _auth.signInWithCredential(credential);
+      await _saveNewUser(cred.user!, phone: phoneNumber);
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    } on FirebaseAuthException catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      if (e.code == 'invalid-verification-code') return 'Invalid OTP code';
+      return 'Verification failed. Please try again.';
     }
   }
 
@@ -214,6 +312,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    await _googleSignIn.signOut();
     await _auth.signOut();
   }
 }
