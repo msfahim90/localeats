@@ -22,16 +22,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _agreed = false;
 
   Future<void> _register() async {
-    if (_nameCtrl.text.isEmpty || _emailCtrl.text.isEmpty ||
-        _passCtrl.text.isEmpty || _confirmPassCtrl.text.isEmpty) {
+    final name = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final pass = _passCtrl.text;
+    final confirm = _confirmPassCtrl.text;
+
+    if (name.isEmpty || email.isEmpty || pass.isEmpty || confirm.isEmpty) {
       _showSnack('Please fill all fields', Colors.red);
       return;
     }
-    if (_passCtrl.text != _confirmPassCtrl.text) {
+    if (pass != confirm) {
       _showSnack('Passwords do not match', Colors.red);
       return;
     }
-    if (_passCtrl.text.length < 6) {
+    if (pass.length < 6) {
       _showSnack('Password must be at least 6 characters', Colors.red);
       return;
     }
@@ -39,30 +43,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _showSnack('Please agree to Terms and Conditions', Colors.red);
       return;
     }
+
     setState(() => _loading = true);
-    final auth = context.read<AuthService>();
-    final error = await auth.registerWithEmail(
-      email: _emailCtrl.text.trim(),
-      password: _passCtrl.text,
-      name: _nameCtrl.text.trim(),
-      role: 'customer',
-    );
-    if (mounted) {
-      setState(() => _loading = false);
-      if (error == null) {
-        Navigator.pushAndRemoveUntil(context,
+    try {
+      final auth = context.read<AuthService>();
+      final error = await auth.registerWithEmail(
+        email: email,
+        password: pass,
+        name: name,
+        role: 'customer',
+      );
+      if (mounted) {
+        setState(() => _loading = false);
+        if (error == null) {
+          Navigator.pushAndRemoveUntil(
+            context,
             MaterialPageRoute(builder: (_) => const LocationScreen()),
-                (_) => false);
-      } else {
-        _showSnack(error, Colors.red);
+                (_) => false,
+          );
+        } else {
+          _showSnack(error, Colors.red);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        _showSnack('Registration failed: $e', Colors.red);
       }
     }
   }
 
   void _showSnack(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg, style: GoogleFonts.poppins()),
-          backgroundColor: color, duration: const Duration(seconds: 3)),
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.poppins()),
+        backgroundColor: color,
+        duration: const Duration(seconds: 4),
+      ),
     );
   }
 
@@ -78,8 +95,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Create Account',
-            style: GoogleFonts.poppins(color: Colors.black,
-                fontWeight: FontWeight.w600)),
+            style: GoogleFonts.poppins(
+                color: Colors.black, fontWeight: FontWeight.w600)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -89,82 +106,92 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               const SizedBox(height: 16),
               Text('Join LocalEats! 🎉',
-                  style: GoogleFonts.poppins(fontSize: 24,
-                      fontWeight: FontWeight.bold)),
+                  style: GoogleFonts.poppins(
+                      fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text('Create your account to start ordering',
                   style: GoogleFonts.poppins(
                       color: Colors.grey.shade600, fontSize: 14)),
               const SizedBox(height: 32),
-
               _label('Full Name'),
-              _buildField(_nameCtrl, 'Enter your full name',
+              _field(_nameCtrl, 'Enter your full name',
                   Icons.person_outline),
               const SizedBox(height: 16),
-
               _label('Email Address'),
-              _buildField(_emailCtrl, 'Enter your email',
+              _field(_emailCtrl, 'Enter your email',
                   Icons.email_outlined,
                   type: TextInputType.emailAddress),
               const SizedBox(height: 16),
-
               _label('Password'),
-              _buildField(_passCtrl, 'Create a password',
-                  Icons.lock_outline, obscure: _obscure,
+              _field(_passCtrl, 'Create a password (min 6 chars)',
+                  Icons.lock_outline,
+                  obscure: _obscure,
                   suffix: IconButton(
-                    icon: Icon(_obscure ? Icons.visibility_off
-                        : Icons.visibility, color: Colors.grey),
-                    onPressed: () => setState(() => _obscure = !_obscure),
+                    icon: Icon(
+                        _obscure ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey),
+                    onPressed: () =>
+                        setState(() => _obscure = !_obscure),
                   )),
               const SizedBox(height: 16),
-
               _label('Confirm Password'),
-              _buildField(_confirmPassCtrl, 'Confirm your password',
-                  Icons.lock_outline, obscure: _obscureConfirm,
+              _field(_confirmPassCtrl, 'Confirm your password',
+                  Icons.lock_outline,
+                  obscure: _obscureConfirm,
                   suffix: IconButton(
-                    icon: Icon(_obscureConfirm ? Icons.visibility_off
-                        : Icons.visibility, color: Colors.grey),
+                    icon: Icon(
+                        _obscureConfirm
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey),
                     onPressed: () => setState(
                             () => _obscureConfirm = !_obscureConfirm),
                   )),
               const SizedBox(height: 20),
-
-              // Terms checkbox
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Checkbox(
                     value: _agreed,
-                    onChanged: (v) => setState(() => _agreed = v ?? false),
+                    onChanged: (v) =>
+                        setState(() => _agreed = v ?? false),
                     activeColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(4)),
                   ),
                   Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.poppins(
-                            fontSize: 12, color: Colors.grey.shade600),
-                        children: [
-                          const TextSpan(text: 'I agree to the '),
-                          TextSpan(text: 'Terms and Conditions',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: AppColors.primary,
-                                  decoration: TextDecoration.underline)),
-                          const TextSpan(text: ' and '),
-                          TextSpan(text: 'Privacy Policy',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  color: AppColors.primary,
-                                  decoration: TextDecoration.underline)),
-                        ],
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: RichText(
+                        text: TextSpan(
+                          style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey.shade600),
+                          children: [
+                            const TextSpan(text: 'I agree to the '),
+                            TextSpan(
+                                text: 'Terms and Conditions',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: AppColors.primary,
+                                    decoration:
+                                    TextDecoration.underline)),
+                            const TextSpan(text: ' and '),
+                            TextSpan(
+                                text: 'Privacy Policy',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: AppColors.primary,
+                                    decoration:
+                                    TextDecoration.underline)),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -178,10 +205,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     elevation: 0,
                   ),
                   child: _loading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const CircularProgressIndicator(
+                      color: Colors.white)
                       : Text('Create Account',
-                          style: GoogleFonts.poppins(
-                              fontSize: 16, fontWeight: FontWeight.w600)),
+                      style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -210,15 +239,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _label(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(text, style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w600, fontSize: 14)),
-    );
-  }
+  Widget _label(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(text,
+        style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600, fontSize: 14)),
+  );
 
-  Widget _buildField(TextEditingController ctrl, String hint, IconData icon,
+  Widget _field(TextEditingController ctrl, String hint, IconData icon,
       {bool obscure = false, Widget? suffix, TextInputType? type}) {
     return TextField(
       controller: ctrl,
@@ -238,7 +266,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             borderSide: BorderSide(color: Colors.grey.shade300)),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+            borderSide:
+            const BorderSide(color: AppColors.primary, width: 2)),
         filled: true,
         fillColor: Colors.grey.shade50,
       ),

@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
-import 'location_screen.dart';
 import 'vendor_dashboard_screen.dart';
 import 'admin_panel_screen.dart';
 import 'register_screen.dart';
+import 'location_screen.dart';
 
 class EmailLoginScreen extends StatefulWidget {
   const EmailLoginScreen({super.key});
@@ -19,67 +19,78 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
+  bool _loading = false;
 
   Future<void> _login() async {
-    if (_emailCtrl.text.isEmpty || _passCtrl.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter email and password',
-            style: GoogleFonts.poppins()), backgroundColor: Colors.red),
-      );
+    if (_emailCtrl.text.trim().isEmpty || _passCtrl.text.isEmpty) {
+      _showSnack('Please enter email and password', Colors.red);
       return;
     }
-    final auth = context.read<AuthService>();
-    final error = await auth.signInWithEmail(
-        _emailCtrl.text.trim(), _passCtrl.text);
-    if (mounted) {
-      if (error == null) {
-        Widget screen;
-        switch (auth.role) {
-          case UserRole.admin:
-            screen = const AdminPanelScreen();
-            break;
-          case UserRole.vendor:
-            screen = const VendorDashboardScreen();
-            break;
-          default:
-            screen = const HomeScreen();
+    setState(() => _loading = true);
+    try {
+      final auth = context.read<AuthService>();
+      final error = await auth.signInWithEmail(
+          _emailCtrl.text.trim(), _passCtrl.text);
+      if (mounted) {
+        setState(() => _loading = false);
+        if (error == null) {
+          _navigate(auth.role);
+        } else {
+          _showSnack(error, Colors.red);
         }
-        Navigator.pushAndRemoveUntil(context,
-            MaterialPageRoute(builder: (_) => screen), (_) => false);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error, style: GoogleFonts.poppins()),
-              backgroundColor: Colors.red),
-        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        _showSnack('Login failed: $e', Colors.red);
       }
     }
   }
 
+  void _navigate(UserRole role) {
+    Widget screen;
+    switch (role) {
+      case UserRole.admin:
+        screen = const AdminPanelScreen();
+        break;
+      case UserRole.vendor:
+        screen = const VendorDashboardScreen();
+        break;
+      default:
+        screen = const HomeScreen();
+    }
+    Navigator.pushAndRemoveUntil(context,
+        MaterialPageRoute(builder: (_) => screen), (_) => false);
+  }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.poppins()),
+        backgroundColor: color,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   void _forgotPassword() {
-    final emailCtrl = TextEditingController(text: _emailCtrl.text);
+    final ctrl = TextEditingController(text: _emailCtrl.text);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Reset Password',
             style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Enter your email to receive a password reset link.',
-                style: GoogleFonts.poppins(fontSize: 13, color: AppColors.textGray)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                hintText: 'Email address',
-                hintStyle: GoogleFonts.poppins(color: AppColors.textGray),
-                prefixIcon: const Icon(Icons.email_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
+        content: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(
+            hintText: 'Enter your email',
+            hintStyle: GoogleFonts.poppins(color: AppColors.textGray),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12)),
+            prefixIcon: const Icon(Icons.email_outlined),
+          ),
         ),
         actions: [
           TextButton(
@@ -89,16 +100,11 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (emailCtrl.text.isEmpty) return;
               Navigator.pop(context);
               final auth = context.read<AuthService>();
-              await auth.resetPassword(emailCtrl.text.trim());
+              await auth.resetPassword(ctrl.text.trim());
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Password reset email sent!',
-                      style: GoogleFonts.poppins()),
-                      backgroundColor: AppColors.primary),
-                );
+                _showSnack('Password reset email sent!', AppColors.primary);
               }
             },
             style: ElevatedButton.styleFrom(
@@ -117,7 +123,6 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthService>();
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -128,16 +133,16 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Sign in with Email',
-            style: GoogleFonts.poppins(color: Colors.black,
-                fontWeight: FontWeight.w600)),
+            style: GoogleFonts.poppins(
+                color: Colors.black, fontWeight: FontWeight.w600)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
               Text('Welcome back! 👋',
                   style: GoogleFonts.poppins(
                       fontSize: 24, fontWeight: FontWeight.bold)),
@@ -146,17 +151,17 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                   style: GoogleFonts.poppins(
                       color: Colors.grey.shade600, fontSize: 14)),
               const SizedBox(height: 32),
-
-              // Email field
-              Text('Email', style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600, fontSize: 14)),
+              Text('Email',
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600, fontSize: 14)),
               const SizedBox(height: 8),
               TextField(
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
                   hintText: 'Enter your email',
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey.shade400),
+                  hintStyle: GoogleFonts.poppins(
+                      color: Colors.grey.shade400),
                   prefixIcon: const Icon(Icons.email_outlined),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -166,24 +171,28 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                       borderSide: BorderSide(color: Colors.grey.shade300)),
                   focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                      borderSide: const BorderSide(
+                          color: AppColors.primary, width: 2)),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Password field
-              Text('Password', style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600, fontSize: 14)),
+              Text('Password',
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600, fontSize: 14)),
               const SizedBox(height: 8),
               TextField(
                 controller: _passCtrl,
                 obscureText: _obscure,
                 decoration: InputDecoration(
                   hintText: 'Enter your password',
-                  hintStyle: GoogleFonts.poppins(color: Colors.grey.shade400),
+                  hintStyle: GoogleFonts.poppins(
+                      color: Colors.grey.shade400),
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility,
+                    icon: Icon(
+                        _obscure ? Icons.visibility_off : Icons.visibility,
                         color: Colors.grey),
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
@@ -195,11 +204,12 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                       borderSide: BorderSide(color: Colors.grey.shade300)),
                   focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                      borderSide: const BorderSide(
+                          color: AppColors.primary, width: 2)),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                 ),
               ),
-
-              // Forgot password
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -210,13 +220,11 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-
-              // Sign in button
               SizedBox(
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: auth.isLoading ? null : _login,
+                  onPressed: _loading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -224,25 +232,39 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                         borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: auth.isLoading
+                  child: _loading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : Text('Sign In',
                           style: GoogleFonts.poppins(
-                              fontSize: 16, fontWeight: FontWeight.w600)),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600)),
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Register
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Expanded(child: Divider()),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text('OR',
+                        style: GoogleFonts.poppins(
+                            color: Colors.grey.shade500, fontSize: 13)),
+                  ),
+                  const Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 20),
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text("Don't have an account? ",
-                        style: GoogleFonts.poppins(color: Colors.grey.shade600)),
+                        style: GoogleFonts.poppins(
+                            color: Colors.grey.shade600)),
                     GestureDetector(
                       onTap: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                          MaterialPageRoute(
+                              builder: (_) => const RegisterScreen())),
                       child: Text('Sign up',
                           style: GoogleFonts.poppins(
                               color: AppColors.primary,
