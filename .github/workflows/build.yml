@@ -26,6 +26,11 @@ jobs:
           rm -rf myapp/lib
           cp -r localeats/lib myapp/lib
           cp localeats/pubspec.yaml myapp/pubspec.yaml
+          
+          # Fix minSdkVersion to 23
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' myapp/android/app/build.gradle.kts
+          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' myapp/android/app/build.gradle
+          
           cd myapp
           flutter pub get
           flutter build apk --debug
