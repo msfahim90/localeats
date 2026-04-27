@@ -28,12 +28,8 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _onAuthStateChanged(User? user) async {
     _user = user;
-    if (user != null) {
-      await _loadUserData(user.uid);
-    } else {
-      _userData = {};
-      _role = UserRole.customer;
-    }
+    if (user != null) await _loadUserData(user.uid);
+    else { _userData = {}; _role = UserRole.customer; }
     notifyListeners();
   }
 
@@ -42,134 +38,119 @@ class AuthService extends ChangeNotifier {
       final doc = await _db.collection('users').doc(uid).get();
       if (doc.exists) {
         _userData = doc.data() ?? {};
-        final roleStr = _userData['role'] ?? 'customer';
-        _role = roleStr == 'admin'
-            ? UserRole.admin
-            : roleStr == 'vendor'
-                ? UserRole.vendor
-                : UserRole.customer;
+        final r = _userData['role'] ?? 'customer';
+        _role = r == 'admin' ? UserRole.admin : r == 'vendor' ? UserRole.vendor : UserRole.customer;
       }
-    } catch (e) {
-      debugPrint('Load user error: $e');
-    }
+    } catch (e) { debugPrint('Load error: $e'); }
   }
 
   Future<String?> signInWithEmail(String email, String password) async {
     try {
-      _isLoading = true;
-      notifyListeners();
-      final cred = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-      await _loadUserData(cred.user!.uid);
-      _isLoading = false;
-      notifyListeners();
+      _isLoading = true; notifyListeners();
+      await _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
+      _isLoading = false; notifyListeners();
       return null;
     } on FirebaseAuthException catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      debugPrint('SignIn error: ${e.code} - ${e.message}');
+      _isLoading = false; notifyListeners();
       switch (e.code) {
-        case 'user-not-found':
-          return 'No account found with this email';
-        case 'wrong-password':
-          return 'Incorrect password';
-        case 'invalid-email':
-          return 'Invalid email address';
-        case 'invalid-credential':
-          return 'Invalid email or password';
-        case 'user-disabled':
-          return 'This account has been disabled';
-        case 'too-many-requests':
-          return 'Too many attempts. Try again later';
-        default:
-          return 'Login failed: ${e.code}';
+        case 'user-not-found': return 'No account found with this email';
+        case 'wrong-password': return 'Incorrect password';
+        case 'invalid-credential': return 'Invalid email or password';
+        case 'invalid-email': return 'Invalid email address';
+        default: return 'Login failed: ${e.code}';
       }
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      debugPrint('SignIn unknown error: $e');
-      return 'Login failed: $e';
-    }
+    } catch (e) { _isLoading = false; notifyListeners(); return 'Login failed: $e'; }
   }
 
   Future<String?> registerWithEmail({
-    required String email,
-    required String password,
-    required String name,
-    required String role,
-    String? businessName,
-    String? businessType,
+    required String email, required String password,
+    required String name, required String role,
+    String? businessName, String? businessType,
   }) async {
     try {
-      _isLoading = true;
-      notifyListeners();
-
-      debugPrint('Starting registration for: $email');
-
+      _isLoading = true; notifyListeners();
       final cred = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-
-      debugPrint('Firebase Auth success: ${cred.user!.uid}');
-
+          email: email.trim(), password: password);
       await cred.user!.updateDisplayName(name);
-
-      final userData = {
-        'name': name,
-        'email': email.trim(),
-        'role': role,
+      final data = {
+        'name': name, 'email': email.trim(), 'role': role,
         'createdAt': FieldValue.serverTimestamp(),
-        'addresses': [],
-        'totalOrders': 0,
+        'addresses': [], 'totalOrders': 0,
       };
-
-      await _db.collection('users').doc(cred.user!.uid).set(userData);
-      debugPrint('Firestore save success');
-
-      _userData = userData;
-      _user = cred.user;
-      _role = role == 'admin'
-          ? UserRole.admin
-          : role == 'vendor'
-              ? UserRole.vendor
-              : UserRole.customer;
-
-      _isLoading = false;
-      notifyListeners();
+      await _db.collection('users').doc(cred.user!.uid).set(data);
+      _isLoading = false; notifyListeners();
       return null;
     } on FirebaseAuthException catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      debugPrint('Register FirebaseAuth error: ${e.code} - ${e.message}');
+      _isLoading = false; notifyListeners();
       switch (e.code) {
-        case 'email-already-in-use':
-          return 'Account already exists with this email';
-        case 'weak-password':
-          return 'Password must be at least 6 characters';
-        case 'invalid-email':
-          return 'Invalid email address';
-        case 'operation-not-allowed':
-          return 'Email registration is not enabled. Please contact support.';
-        default:
-          return 'Registration failed: ${e.code}';
+        case 'email-already-in-use': return 'Account already exists with this email';
+        case 'weak-password': return 'Password must be at least 6 characters';
+        case 'invalid-email': return 'Invalid email address';
+        case 'operation-not-allowed': return 'Email sign-up is disabled. Enable it in Firebase Console';
+        default: return 'Registration failed: ${e.code}';
       }
+    } catch (e) { _isLoading = false; notifyListeners(); return 'Registration failed: $e'; }
+  }
+
+  // Google Sign In (stub - shows message)
+  Future<String?> signInWithGoogle() async {
+    return 'Google Sign In requires SHA-1 setup. Use Email login for now.';
+  }
+
+  // Phone OTP
+  Future<String?> sendOTP(String phoneNumber, Function(String) onCodeSent) async {
+    try {
+      _isLoading = true; notifyListeners();
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          await _auth.signInWithCredential(credential);
+          _isLoading = false; notifyListeners();
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          _isLoading = false; notifyListeners();
+          debugPrint('Phone verify failed: ${e.code}');
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          _isLoading = false; notifyListeners();
+          onCodeSent(verificationId);
+        },
+        codeAutoRetrievalTimeout: (_) {},
+        timeout: const Duration(seconds: 60),
+      );
+      return null;
     } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      debugPrint('Register unknown error: $e');
-      return 'Registration failed: $e';
+      _isLoading = false; notifyListeners();
+      return 'Failed to send OTP: $e';
     }
   }
 
-  Future<void> resetPassword(String email) async {
+  Future<String?> verifyOTP(String verificationId, String otp, String phone) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email.trim());
-    } catch (e) {
-      debugPrint('Reset password error: $e');
-    }
+      _isLoading = true; notifyListeners();
+      final credential = PhoneAuthProvider.credential(
+          verificationId: verificationId, smsCode: otp);
+      final cred = await _auth.signInWithCredential(credential);
+      // Save user if new
+      final doc = await _db.collection('users').doc(cred.user!.uid).get();
+      if (!doc.exists) {
+        await _db.collection('users').doc(cred.user!.uid).set({
+          'name': 'User', 'email': '', 'phone': phone, 'role': 'customer',
+          'createdAt': FieldValue.serverTimestamp(), 'addresses': [], 'totalOrders': 0,
+        });
+      }
+      _isLoading = false; notifyListeners();
+      return null;
+    } on FirebaseAuthException catch (e) {
+      _isLoading = false; notifyListeners();
+      if (e.code == 'invalid-verification-code') return 'Invalid OTP code';
+      return 'Verification failed: ${e.code}';
+    } catch (e) { _isLoading = false; notifyListeners(); return 'Verification failed: $e'; }
+  }
+
+  Future<void> resetPassword(String email) async {
+    try { await _auth.sendPasswordResetEmail(email: email.trim()); }
+    catch (e) { debugPrint('Reset error: $e'); }
   }
 
   Future<void> updateProfile(Map<String, dynamic> data) async {
@@ -177,32 +158,21 @@ class AuthService extends ChangeNotifier {
     try {
       await _db.collection('users').doc(_user!.uid).update(data);
       _userData.addAll(data);
-      if (data.containsKey('name')) {
-        await _user!.updateDisplayName(data['name']);
-      }
+      if (data.containsKey('name')) await _user!.updateDisplayName(data['name']);
       notifyListeners();
-    } catch (e) {
-      debugPrint('Update profile error: $e');
-    }
+    } catch (e) { debugPrint('Update error: $e'); }
   }
 
   Future<void> saveAddress({
-    required String houseNumber,
-    required String apartment,
-    required String area,
-    required String city,
-    required String instructions,
-    required String label,
+    required String houseNumber, required String apartment,
+    required String area, required String city,
+    required String instructions, required String label,
   }) async {
     if (_user == null) return;
     try {
       final address = {
-        'houseNumber': houseNumber,
-        'apartment': apartment,
-        'area': area,
-        'city': city,
-        'instructions': instructions,
-        'label': label,
+        'houseNumber': houseNumber, 'apartment': apartment,
+        'area': area, 'city': city, 'instructions': instructions, 'label': label,
       };
       await _db.collection('users').doc(_user!.uid).update({
         'addresses': FieldValue.arrayUnion([address]),
@@ -210,12 +180,8 @@ class AuthService extends ChangeNotifier {
       if (_userData['addresses'] == null) _userData['addresses'] = [];
       (_userData['addresses'] as List).add(address);
       notifyListeners();
-    } catch (e) {
-      debugPrint('Save address error: $e');
-    }
+    } catch (e) { debugPrint('Address error: $e'); }
   }
 
-  Future<void> signOut() async {
-    await _auth.signOut();
-  }
+  Future<void> signOut() async { await _auth.signOut(); }
 }

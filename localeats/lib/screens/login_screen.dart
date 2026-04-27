@@ -8,14 +8,13 @@ import 'vendor_dashboard_screen.dart';
 import 'admin_panel_screen.dart';
 import 'register_screen.dart';
 import 'email_login_screen.dart';
-import 'phone_login_screen.dart';
+import 'phone_login_screen.dart' hide AuthService;
 import 'location_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
-  void _navigateAfterLogin(BuildContext context, UserRole role,
-      bool isNewUser) {
+  void _navigateAfterLogin(BuildContext context, UserRole role, bool isNewUser) {
     Widget screen;
     if (isNewUser) {
       screen = const LocationScreen();
